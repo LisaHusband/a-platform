@@ -1,0 +1,35 @@
+# A-PLATFORM robots.txt
+# 允许所有搜索引擎抓取公开页面（首页、浏览、内容详情、知识图谱）。
+# 内容详情页对未付费用户展示摘要与正文预览，可被收录建立索引。
+
+User-agent: *
+Allow: /
+
+# 主流搜索引擎显式放行
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+User-agent: Baiduspider
+Allow: /
+
+User-agent: YandexBot
+Allow: /
+
+User-agent: DuckDuckBot
+Allow: /
+
+User-agent: Sogou web spider
+Allow: /
+
+User-agent: 360Spider
+Allow: /
+
+# 不抓取后端接口与账户相关路径
+Disallow: /api/
+Disallow: /account
+Disallow: /publish
+
+Sitemap: https://www.a-platform.tech/sitemap.xml
