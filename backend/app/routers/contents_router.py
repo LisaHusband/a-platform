@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, selectinload
@@ -181,7 +181,7 @@ def publish(
     if content.status not in ("tier1_passed", "tier2_passed"):
         raise HTTPException(409, f"Cannot publish from status '{content.status}'")
     content.status = "published"
-    content.published_at = datetime.now(timezone.utc)
+    content.published_at = datetime.now(UTC)
     db.commit()
     INDEX.rebuild(db)
     return content

@@ -1,7 +1,7 @@
 import hashlib
 import os
 import secrets
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import jwt
 from fastapi import Depends, HTTPException
@@ -35,7 +35,7 @@ def create_token(user: User) -> str:
     payload = {
         "sub": str(user.id),
         "role": user.role,
-        "exp": datetime.now(timezone.utc) + timedelta(hours=TOKEN_TTL_HOURS),
+        "exp": datetime.now(UTC) + timedelta(hours=TOKEN_TTL_HOURS),
     }
     return jwt.encode(payload, SECRET, algorithm=ALGO)
 

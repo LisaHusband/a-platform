@@ -1,7 +1,7 @@
 """Paywall: full body is visible to the author, editors/admins, buyers,
 active full subscribers, or active topic subscribers of any of its topics."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
 
@@ -21,12 +21,12 @@ def has_access(db: Session, user: User | None, content: Content) -> bool:
         .first()
     ):
         return True
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     topic_ids = {t.id for t in content.topics}
     for sub in db.query(Subscription).filter(Subscription.user_id == user.id).all():
         expires = sub.expires_at
         if expires.tzinfo is None:
-            expires = expires.replace(tzinfo=timezone.utc)
+            expires = expires.replace(tzinfo=UTC)
         if expires < now:
             continue
         if sub.plan == "monthly":

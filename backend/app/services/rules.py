@@ -24,7 +24,9 @@ class RuleResult:
     penalty: int = 0
 
 
-def run_tier1(title: str, body: str, abstract: str, sources: str) -> tuple[bool, int, list[RuleResult]]:
+def run_tier1(
+    title: str, body: str, abstract: str, sources: str
+) -> tuple[bool, int, list[RuleResult]]:
     results: list[RuleResult] = []
     words = len(body)
 
@@ -48,8 +50,8 @@ def run_tier1(title: str, body: str, abstract: str, sources: str) -> tuple[bool,
     ads = [p for p in AD_PATTERNS if re.search(p, body, re.IGNORECASE)]
     hard("no-ads", not ads, "未检测到广告引流内容" if not ads else f"命中广告模式: {ads}")
 
-    lines = [l for l in body.splitlines() if l.strip()]
-    headings = sum(1 for l in lines if l.lstrip().startswith("#"))
+    lines = [line for line in body.splitlines() if line.strip()]
+    headings = sum(1 for line in lines if line.lstrip().startswith("#"))
     soft(
         "structured",
         headings >= 2,

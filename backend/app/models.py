@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import (
     Column,
@@ -11,13 +11,41 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
 )
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import declarative_mixin, declared_attr, relationship
 
 from .database import Base
 
 
 def utcnow():
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
+
+
+# --- Reusable column mixins (shared type hierarchy) ---------------------------
+
+
+@declarative_mixin
+class IdMixin:
+    """Surrogate integer primary key shared by every table."""
+
+    id = Column(Integer, primary_key=True)
+
+
+@declarative_mixin
+class TimestampMixin:
+    """`created_at` audit column, populated on insert."""
+
+    @declared_attr
+    def created_at(cls):  # noqa: N805 - SQLAlchemy declared_attr convention
+        return Column(DateTime, default=utcnow)
+
+
+@declarative_mixin
+class NamedSlugMixin(IdMixin):
+    """Bilingual, slug-addressable taxonomy node (Category / Tag / Topic)."""
+
+    slug = Column(String, unique=True, nullable=False)
+    name_zh = Column(String, nullable=False)
+    name_en = Column(String, nullable=False)
 
 
 content_tags = Table(
@@ -35,51 +63,36 @@ content_topics = Table(
 )
 
 
-class User(Base):
+class User(IdMixin, TimestampMixin, Base):
     __tablename__ = "users"
-    id = Column(Integer, primary_key=True)
     email = Column(String, unique=True, nullable=False, index=True)
     name = Column(String, nullable=False)
     password_hash = Column(String, nullable=False)
     role = Column(String, default="reader")  # reader | author | editor | expert | admin
-    created_at = Column(DateTime, default=utcnow)
 
     purchases = relationship("Purchase", back_populates="user")
     subscriptions = relationship("Subscription", back_populates="user")
 
 
-class Category(Base):
+class Category(NamedSlugMixin, Base):
     __tablename__ = "categories"
-    id = Column(Integer, primary_key=True)
-    slug = Column(String, unique=True, nullable=False)
-    name_zh = Column(String, nullable=False)
-    name_en = Column(String, nullable=False)
     parent_id = Column(Integer, ForeignKey("categories.id"), nullable=True)
 
     children = relationship("Category")
 
 
-class Tag(Base):
+class Tag(NamedSlugMixin, Base):
     __tablename__ = "tags"
-    id = Column(Integer, primary_key=True)
-    slug = Column(String, unique=True, nullable=False)
-    name_zh = Column(String, nullable=False)
-    name_en = Column(String, nullable=False)
 
 
-class Topic(Base):
+class Topic(NamedSlugMixin, Base):
     __tablename__ = "topics"
-    id = Column(Integer, primary_key=True)
-    slug = Column(String, unique=True, nullable=False)
-    name_zh = Column(String, nullable=False)
-    name_en = Column(String, nullable=False)
     description_zh = Column(Text, default="")
     description_en = Column(Text, default="")
 
 
-class Content(Base):
+class Content(IdMixin, TimestampMixin, Base):
     __tablename__ = "contents"
-    id = Column(Integer, primary_key=True)
     title = Column(String, nullable=False)
     subtitle = Column(String, default="")
     body = Column(Text, nullable=False)  # markdown
@@ -94,7 +107,6 @@ class Content(Base):
     review_notes = Column(Text, default="")
     author_id = Column(Integer, ForeignKey("users.id"))
     category_id = Column(Integer, ForeignKey("categories.id"))
-    created_at = Column(DateTime, default=utcnow)
     published_at = Column(DateTime, nullable=True)
     reading_minutes = Column(Integer, default=10)
 
@@ -104,33 +116,29 @@ class Content(Base):
     topics = relationship("Topic", secondary=content_topics)
 
 
-class ContentRelation(Base):
+class ContentRelation(IdMixin, Base):
     """Knowledge-graph edge between two contents (explicit, editorial)."""
 
     __tablename__ = "content_relations"
     __table_args__ = (UniqueConstraint("src_id", "dst_id", "relation"),)
-    id = Column(Integer, primary_key=True)
     src_id = Column(Integer, ForeignKey("contents.id"), nullable=False)
     dst_id = Column(Integer, ForeignKey("contents.id"), nullable=False)
     relation = Column(String, default="related")  # related | cites | follows | contrasts
 
 
-class Purchase(Base):
+class Purchase(IdMixin, TimestampMixin, Base):
     __tablename__ = "purchases"
     __table_args__ = (UniqueConstraint("user_id", "content_id"),)
-    id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     content_id = Column(Integer, ForeignKey("contents.id"), nullable=False)
     price_paid = Column(Float, default=0.0)
-    created_at = Column(DateTime, default=utcnow)
 
     user = relationship("User", back_populates="purchases")
     content = relationship("Content")
 
 
-class Subscription(Base):
+class Subscription(IdMixin, Base):
     __tablename__ = "subscriptions"
-    id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     plan = Column(String, default="monthly")  # monthly | topic
     topic_id = Column(Integer, ForeignKey("topics.id"), nullable=True)
@@ -141,12 +149,10 @@ class Subscription(Base):
     topic = relationship("Topic")
 
 
-class ReviewEvent(Base):
+class ReviewEvent(IdMixin, TimestampMixin, Base):
     __tablename__ = "review_events"
-    id = Column(Integer, primary_key=True)
     content_id = Column(Integer, ForeignKey("contents.id"), nullable=False)
     tier = Column(Integer, nullable=False)  # 1 | 2 | 3
     reviewer_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     verdict = Column(String, nullable=False)  # pass | reject
     detail = Column(Text, default="")  # explainable rule hits / editor notes
-    created_at = Column(DateTime, default=utcnow)

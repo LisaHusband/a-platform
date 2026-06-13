@@ -74,7 +74,10 @@ def tier2(
     db: Session = Depends(get_db),
     user: User = Depends(require_role("editor")),
 ):
-    return _human_review(db, user, content_id, data, tier=2, from_status="tier1_passed", to_status="tier2_passed")
+    return _human_review(
+        db, user, content_id, data, tier=2,
+        from_status="tier1_passed", to_status="tier2_passed",
+    )
 
 
 @router.post("/{content_id}/tier3")
@@ -84,7 +87,10 @@ def tier3(
     db: Session = Depends(get_db),
     user: User = Depends(require_role("expert")),
 ):
-    return _human_review(db, user, content_id, data, tier=3, from_status="tier2_passed", to_status="tier2_passed")
+    return _human_review(
+        db, user, content_id, data, tier=3,
+        from_status="tier2_passed", to_status="tier2_passed",
+    )
 
 
 def _human_review(db, user, content_id, data: ReviewIn, tier, from_status, to_status):
@@ -92,7 +98,9 @@ def _human_review(db, user, content_id, data: ReviewIn, tier, from_status, to_st
     if not content:
         raise HTTPException(404, "Content not found")
     if content.status != from_status:
-        raise HTTPException(409, f"Tier-{tier} expects '{from_status}', current: '{content.status}'")
+        raise HTTPException(
+            409, f"Tier-{tier} expects '{from_status}', current: '{content.status}'"
+        )
     if data.verdict not in ("pass", "reject"):
         raise HTTPException(400, "verdict must be pass|reject")
     content.status = to_status if data.verdict == "pass" else "rejected"

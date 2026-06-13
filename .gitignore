@@ -22,5 +22,16 @@ dist/
 # Env & editor
 .env
 .env.*
+!.env.example
+!deploy/.env.example
 .idea/
 .vscode/
+
+# Test coverage
+backend/coverage.xml
+backend/.coverage
+frontend/coverage/
+
+# Deploy build artifact
+artifact.tgz
+frontend/dist.zip

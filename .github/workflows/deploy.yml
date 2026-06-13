@@ -1,0 +1,109 @@
+name: Deploy
+
+# 仅在 CI 工作流于 main 上成功后触发，确保「测试不过不发布」。
+# Triggered only after the CI workflow succeeds on main — tests gate deploys.
+# 也支持手动触发 / also supports manual dispatch.
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build, ship & release (SSH push)
+    runs-on: ubuntu-latest
+    # CI 成功或手动触发才执行 / only on green CI or manual run
+    if: >-
+      ${{ github.event_name == 'workflow_dispatch' ||
+          github.event.workflow_run.conclusion == 'success' }}
+    environment: production
+    env:
+      DOMAIN_NAME: ${{ secrets.DOMAIN_NAME }}
+      DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+      NGINX_CONF_PATH: ${{ secrets.NGINX_CONF_PATH }}
+      BACKEND_PORT: ${{ secrets.BACKEND_PORT }}
+      SSL_EMAIL: ${{ secrets.SSL_EMAIL }}
+      SERVICE_NAME: ${{ secrets.SERVICE_NAME }}
+      SERVICE_USER: ${{ secrets.SERVER_USER }}
+    steps:
+      - name: Checkout the tested commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Compute release id
+        id: rel
+        run: echo "id=$(date +%Y%m%d%H%M%S)-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Build frontend
+        working-directory: frontend
+        env:
+          VITE_API_BASE: ${{ secrets.VITE_API_BASE || format('https://{0}/api/v1', secrets.DOMAIN_NAME) }}
+        run: |
+          npm ci
+          npm run build
+
+      - name: Stage & package release artifact
+        run: |
+          set -euo pipefail
+          stage="$(mktemp -d)"
+          mkdir -p "$stage/backend" "$stage/frontend"
+          # 后端源码（不含 venv / db / 缓存）/ backend source only
+          cp -r backend/app "$stage/backend/app"
+          cp backend/requirements.txt backend/run.py backend/pyproject.toml "$stage/backend/"
+          # 前端构建产物 / frontend build output
+          cp -r frontend/dist "$stage/frontend/dist"
+          tar -czf artifact.tgz -C "$stage" .
+          echo "Artifact size: $(du -h artifact.tgz | cut -f1)"
+
+      - name: Upload artifact to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          port: ${{ secrets.SERVER_PORT }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_KEY }}
+          source: "artifact.tgz,deploy/**"
+          target: "/tmp/aplatform-${{ steps.rel.outputs.id }}"
+          strip_components: 0
+
+      - name: Preflight + deploy over SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          port: ${{ secrets.SERVER_PORT }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_KEY }}
+          envs: DOMAIN_NAME,DEPLOY_PATH,NGINX_CONF_PATH,BACKEND_PORT,SSL_EMAIL,SERVICE_NAME,SERVICE_USER,RELEASE_ID
+          command_timeout: "20m"
+          script: |
+            set -euo pipefail
+            export RELEASE_ID="${{ steps.rel.outputs.id }}"
+            WORK="/tmp/aplatform-${RELEASE_ID}"
+            chmod +x "$WORK/deploy/scripts/"*.sh
+            cd "$WORK/deploy/scripts"
+            ./preflight.sh
+            ARTIFACT="$WORK/artifact.tgz" ./deploy.sh
+            rm -rf "$WORK"
+
+      - name: Report result
+        if: always()
+        run: |
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "✅ Released ${{ steps.rel.outputs.id }} to ${{ secrets.DOMAIN_NAME }}"
+          else
+            echo "❌ Deploy failed — server auto-rolled back to the previous release"
+          fi

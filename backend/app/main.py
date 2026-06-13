@@ -11,10 +11,12 @@ from .routers import (
     review_router,
     search_router,
     sitemap_router,
+    system_router,
     taxonomy_router,
 )
 from .seed import seed_if_empty
 from .services.search_engine import INDEX
+from .version import APP_VERSION
 
 
 @asynccontextmanager
@@ -29,7 +31,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="A-PLATFORM", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="A-PLATFORM", version=APP_VERSION, lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -47,9 +49,5 @@ app.include_router(taxonomy_router.router, prefix=API_PREFIX)
 app.include_router(search_router.router, prefix=API_PREFIX)
 app.include_router(review_router.router, prefix=API_PREFIX)
 app.include_router(billing_router.router, prefix=API_PREFIX)
+app.include_router(system_router.router, prefix=API_PREFIX)
 app.include_router(sitemap_router.router)  # /sitemap.xml stays at site root
-
-
-@app.get(f"{API_PREFIX}/health")
-def health():
-    return {"status": "ok", "indexed_docs": len(INDEX.docs)}

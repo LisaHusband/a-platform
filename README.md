@@ -1,7 +1,19 @@
 # A-PLATFORM
 
+> 官网 / Website：**https://www.a-platform.tech**
+
 去算法化、非社交化、主动探索型的高质量内容平台。前后端分离：FastAPI (Python) + React (TypeScript)。
-需求来源：[docs/需求整理.md](docs/需求整理.md)。
+An algorithm-free, non-social, exploration-driven platform for high-quality content. Separated front/back end: FastAPI (Python) + React (TypeScript).
+
+![CI](https://github.com/a-platform/a-platform/actions/workflows/ci.yml/badge.svg)
+
+- 文档中心 / Docs hub：[docs/](docs/README.md)
+- 需求 / Requirements：[docs/需求整理.md](docs/需求整理.md)
+- 贡献指南 / Contributing：[docs/CONTRIBUTING.md](docs/CONTRIBUTING.md)
+- 架构与规范 / Architecture：[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+- 部署方案 / Deployment：[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)
+- 变更日志 / Changelog：[CHANGELOG.md](CHANGELOG.md)
+- 许可证 / License：[PolyForm Noncommercial 1.0.0](LICENSE)（仅限非商业用途 / non-commercial only）
 
 ## 快速启动
 
@@ -78,6 +90,40 @@ frontend/src/
   i18n.ts            中英文案；context.tsx 主题+登录态
   api.ts             API_BASE（VITE_API_BASE，默认 /api/v1）+ 统一请求封装
 ```
+
+## 测试
+
+两端单元测试覆盖率门槛均为 **90%**，CI 会强制校验。
+
+```bash
+# 后端（pytest + coverage，门槛 90%）
+cd backend
+.venv/bin/pip install -r requirements-dev.txt
+.venv/bin/pytest                       # 含 --cov，低于 90% 直接失败
+
+# 前端（Vitest + Testing Library，门槛 90%）
+cd frontend
+npm install
+npm test                               # 单次运行 + 覆盖率
+npm run test:watch                     # 监听模式
+```
+
+## 持续集成与分支模型
+
+采用 **Git Flow**：`feature/*` → `develop` → `release/*` → `main`，紧急修复走 `hotfix/*`。
+[.github/workflows/ci.yml](.github/workflows/ci.yml) 在向 `main`/`develop`/`release/*`/`hotfix/*` 推送或对其发起 PR 时触发，
+并行执行后端与前端两条流水线（lint/类型检查 → 构建 → 测试 + 覆盖率门槛）。
+约定见 [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md)。
+
+## 自动部署 · Deployment
+
+采用 **GitHub Actions + SSH 推送式** 部署：CI 全绿后自动构建、打包、上传并在服务器原子切换发布；
+部署前环境预检、部署后健康检查，Nginx 与 SSL 证书脚本自动管理，失败自动回滚到上一稳定版本。
+GitHub Actions + SSH push: after green CI it builds, ships, and atomically switches the release on
+the server; preflight before, health checks after, script-managed Nginx + TLS, auto-rollback on failure.
+
+完整方案、目录结构、GitHub Secrets 与上线前准备清单见 [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)。
+Full design, layout, secrets and the pre-launch checklist: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ## 许可证
 

@@ -1,0 +1,34 @@
+# Ruff: PEP 8 style + import hygiene. Line length matches Black's default.
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+# E/W: pycodestyle (PEP 8), F: pyflakes, I: isort, B: bugbear, UP: pyupgrade.
+select = ["E", "W", "F", "I", "B", "UP"]
+
+[tool.ruff.lint.flake8-bugbear]
+# FastAPI's dependency-injection markers are *meant* to live in argument
+# defaults; they are effectively immutable, so B008 should not flag them.
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Query", "app.auth.require_role"]
+
+[tool.ruff.lint.per-file-ignores]
+# seed.py holds long bilingual demo strings; wrapping them hurts readability.
+"app/seed.py" = ["E501"]
+# Tests may use assert-heavy patterns and reimport fixtures locally.
+"tests/**" = ["B011"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q --cov=app --cov-report=term-missing --cov-report=xml --cov-fail-under=90"
+
+[tool.coverage.run]
+branch = true
+source = ["app"]
+omit = ["app/__init__.py"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
+]

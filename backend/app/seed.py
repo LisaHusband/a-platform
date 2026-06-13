@@ -4,7 +4,7 @@ Demo accounts (password for all: `password123`):
     admin@a.dev / editor@a.dev / expert@a.dev / author@a.dev / reader@a.dev
 """
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy.orm import Session
 
@@ -99,7 +99,7 @@ def seed_if_empty(db: Session) -> None:
     db.flush()
 
     author = users["author"]
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     def make(
         title, subtitle, abstract, lang, ctype, cat, tag_keys, topic_keys,
@@ -215,7 +215,7 @@ def seed_if_empty(db: Session) -> None:
         "[1] 文字稿全文\n[2] 提及论文列表",
         15,
     )
-    c8 = make(
+    make(  # c8: pending draft, intentionally left unpublished
         "未刊稿：内容平台冷启动的供给侧策略",
         "草稿,等待审核",
         "讨论高质量内容平台冷启动阶段的创作者激励设计。",

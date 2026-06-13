@@ -1,5 +1,10 @@
-export interface Named {
+// --- Type hierarchy -----------------------------------------------------------
+// Every persisted record carries a numeric id; mirrors the backend IdMixin.
+export interface Entity {
   id: number;
+}
+// A bilingual, slug-addressable taxonomy node; mirrors backend NamedSlugMixin.
+export interface Named extends Entity {
   slug: string;
   name_zh: string;
   name_en: string;
@@ -11,14 +16,13 @@ export interface Topic extends Named {
   description_zh: string;
   description_en: string;
 }
-export interface User {
-  id: number;
+export interface User extends Entity {
   email: string;
   name: string;
   role: string;
 }
-export interface ContentCard {
-  id: number;
+export type AuthorRef = Pick<User, "id" | "name">;
+export interface ContentCard extends Entity {
   title: string;
   subtitle: string;
   abstract: string;
@@ -28,7 +32,7 @@ export interface ContentCard {
   status: string;
   reading_minutes: number;
   published_at: string | null;
-  author: { id: number; name: string } | null;
+  author: AuthorRef | null;
   category: Category | null;
   tags: Named[];
   topics: Named[];
@@ -58,15 +62,13 @@ export interface GraphOut {
   nodes: { id: number; title: string; content_type: string; topic_slugs: string[] }[];
   edges: { src: number; dst: number; relation: string }[];
 }
-export interface Subscription {
-  id: number;
+export interface Subscription extends Entity {
   plan: string;
   topic: Topic | null;
   started_at: string;
   expires_at: string;
 }
-export interface Purchase {
-  id: number;
+export interface Purchase extends Entity {
   content: ContentCard;
   price_paid: number;
   created_at: string;

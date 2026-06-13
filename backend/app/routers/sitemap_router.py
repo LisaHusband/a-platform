@@ -8,7 +8,7 @@ and points here.
 """
 
 import os
-from datetime import timezone
+from datetime import UTC
 from xml.sax.saxutils import escape
 
 from fastapi import APIRouter, Depends
@@ -54,7 +54,7 @@ def sitemap(db: Session = Depends(get_db)):
         if c.published_at:
             dt = c.published_at
             if dt.tzinfo is None:
-                dt = dt.replace(tzinfo=timezone.utc)
+                dt = dt.replace(tzinfo=UTC)
             lastmod = dt.date().isoformat()
         urls.append(_url(f"{BASE_URL}/content/{c.id}", "weekly", "0.7", lastmod))
 

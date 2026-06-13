@@ -1,6 +1,16 @@
 from datetime import datetime
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
+
+
+class ORMModel(BaseModel):
+    """Base for every schema projected from an ORM row.
+
+    Centralises `from_attributes=True` so subclasses can be built with
+    `Model.model_validate(orm_obj)` without repeating per-class config.
+    """
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class RegisterIn(BaseModel):
@@ -14,14 +24,11 @@ class LoginIn(BaseModel):
     password: str
 
 
-class UserOut(BaseModel):
+class UserOut(ORMModel):
     id: int
     email: str
     name: str
     role: str
-
-    class Config:
-        from_attributes = True
 
 
 class TokenOut(BaseModel):
@@ -29,14 +36,11 @@ class TokenOut(BaseModel):
     user: UserOut
 
 
-class NamedOut(BaseModel):
+class NamedOut(ORMModel):
     id: int
     slug: str
     name_zh: str
     name_en: str
-
-    class Config:
-        from_attributes = True
 
 
 class CategoryOut(NamedOut):
@@ -48,15 +52,12 @@ class TopicOut(NamedOut):
     description_en: str = ""
 
 
-class AuthorOut(BaseModel):
+class AuthorOut(ORMModel):
     id: int
     name: str
 
-    class Config:
-        from_attributes = True
 
-
-class ContentCard(BaseModel):
+class ContentCard(ORMModel):
     """List/preview projection — never includes the paid body."""
 
     id: int
@@ -73,9 +74,6 @@ class ContentCard(BaseModel):
     category: CategoryOut | None
     tags: list[NamedOut] = []
     topics: list[NamedOut] = []
-
-    class Config:
-        from_attributes = True
 
 
 class ContentDetail(ContentCard):
@@ -104,25 +102,19 @@ class ReviewIn(BaseModel):
     detail: str = ""
 
 
-class PurchaseOut(BaseModel):
+class PurchaseOut(ORMModel):
     id: int
     content: ContentCard
     price_paid: float
     created_at: datetime
 
-    class Config:
-        from_attributes = True
 
-
-class SubscriptionOut(BaseModel):
+class SubscriptionOut(ORMModel):
     id: int
     plan: str
     topic: TopicOut | None
     started_at: datetime
     expires_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 class SubscribeIn(BaseModel):
