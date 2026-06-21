@@ -6,7 +6,15 @@ from sqlalchemy.orm import Session, selectinload
 from ..auth import get_current_user, get_optional_user
 from ..database import get_db
 from ..models import Category, Content, ContentRelation, Tag, Topic, User
-from ..schemas import ContentCard, ContentDetail, ContentIn, GraphEdge, GraphNode, GraphOut
+from ..schemas import (
+    ContentCard,
+    ContentDetail,
+    ContentIn,
+    GraphEdge,
+    GraphNode,
+    GraphOut,
+    Page,
+)
 from ..services.access import has_access
 from ..services.search_engine import INDEX
 
@@ -28,7 +36,16 @@ def _published(db: Session):
     )
 
 
-@router.get("", response_model=list[ContentCard])
+def _cards_in_order(db: Session, ids: list[int]) -> list[Content]:
+    """按给定 id 顺序取回内容卡 / fetch content rows preserving the given id order."""
+    if not ids:
+        return []
+    rows = _published(db).filter(Content.id.in_(ids)).all()
+    by_id = {c.id: c for c in rows}
+    return [by_id[i] for i in ids if i in by_id]
+
+
+@router.get("", response_model=Page[ContentCard])
 def list_contents(
     db: Session = Depends(get_db),
     category: str | None = None,
@@ -36,11 +53,47 @@ def list_contents(
     topic: str | None = None,
     content_type: str | None = None,
     lang: str | None = None,
-    sort: str = Query("newest", pattern="^(newest|oldest|title)$"),
-    page: int = 1,
-    page_size: int = Query(20, le=100),
+    q: str | None = Query(None, description="关键词/关键字 / keyword search"),
+    sort: str = Query("newest", pattern="^(relevance|newest|oldest|title)$"),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
 ):
-    q = _published(db)
+    """分类索引：分页 + 关键词检索。
+
+    关键词查询走内存倒排索引（毫秒级，面向百万级目录），可叠加分类/标签/专题/
+    类型/语言过滤；纯过滤浏览走带复合索引的数据库查询。
+    Keyword queries use the in-memory inverted index (millisecond, million-scale)
+    with optional facet filters; pure-filter browse uses indexed DB queries.
+    """
+    offset = (page - 1) * page_size
+
+    # --- 关键词路径：复用可解释搜索索引 / keyword path via the search index ----
+    if q and q.strip():
+        raw = q.strip()
+        if category:
+            raw += f" category:{category}"
+        if tag:
+            raw += f" tag:{tag}"
+        if topic:
+            raw += f" topic:{topic}"
+        if content_type:
+            raw += f" type:{content_type}"
+        if lang:
+            raw += f" lang:{lang}"
+        results, _ = INDEX.search(raw, sort=sort if sort != "newest" else "relevance")
+        total = len(results)
+        ids = [doc.id for doc, _, _ in results[offset : offset + page_size]]
+        items = _cards_in_order(db, ids)
+        return Page(
+            items=[ContentCard.model_validate(c) for c in items],
+            total=total,
+            page=page,
+            page_size=page_size,
+            has_more=offset + page_size < total,
+        )
+
+    # --- 纯过滤路径：数据库复合索引 / pure-filter path via indexed DB query ----
+    query = _published(db)
     if category:
         cat = db.query(Category).filter(Category.slug == category).first()
         if not cat:
@@ -52,22 +105,31 @@ def list_contents(
             children = [c.id for c in all_cats if c.parent_id in frontier]
             ids.extend(children)
             frontier = children
-        q = q.filter(Content.category_id.in_(ids))
+        query = query.filter(Content.category_id.in_(ids))
     if tag:
-        q = q.join(Content.tags).filter(Tag.slug == tag)
+        query = query.join(Content.tags).filter(Tag.slug == tag)
     if topic:
-        q = q.join(Content.topics).filter(Topic.slug == topic)
+        query = query.join(Content.topics).filter(Topic.slug == topic)
     if content_type:
-        q = q.filter(Content.content_type == content_type)
+        query = query.filter(Content.content_type == content_type)
     if lang:
-        q = q.filter(Content.lang == lang)
-    if sort == "newest":
-        q = q.order_by(Content.published_at.desc())
-    elif sort == "oldest":
-        q = q.order_by(Content.published_at.asc())
-    else:
-        q = q.order_by(Content.title.asc())
-    return q.offset((page - 1) * page_size).limit(page_size).all()
+        query = query.filter(Content.lang == lang)
+
+    total = query.order_by(None).count()
+    if sort == "oldest":
+        query = query.order_by(Content.published_at.asc())
+    elif sort == "title":
+        query = query.order_by(Content.title.asc())
+    else:  # newest / relevance fallback
+        query = query.order_by(Content.published_at.desc())
+    items = query.offset(offset).limit(page_size).all()
+    return Page(
+        items=[ContentCard.model_validate(c) for c in items],
+        total=total,
+        page=page,
+        page_size=page_size,
+        has_more=offset + page_size < total,
+    )
 
 
 @router.get("/graph", response_model=GraphOut)

@@ -1,13 +1,13 @@
 import { screen, waitFor } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { card } from "../test/fixtures";
+import { card, page } from "../test/fixtures";
 import { mockFetch, renderApp, setLang } from "../test/utils";
 import Home from "./Home";
 
 describe("Home", () => {
   it("renders principles and latest content", async () => {
     await setLang("zh");
-    mockFetch({ "/contents": [card] });
+    mockFetch({ "/contents": page([card]) });
     renderApp(<Home />);
     expect(screen.getByText("最新发布")).toBeInTheDocument();
     expect(screen.getByText(/去推荐算法/)).toBeInTheDocument();

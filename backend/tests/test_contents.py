@@ -1,18 +1,46 @@
+def _items(res):
+    return res.json()["items"]
+
+
 def test_list_contents_default(client):
     res = client.get("/api/v1/contents")
     assert res.status_code == 200
-    items = res.json()
+    body = res.json()
     # 7 published (c8 is a pending draft)
-    assert len(items) == 7
-    assert all(i["status"] == "published" for i in items)
+    assert body["total"] == 7
+    assert len(body["items"]) == 7
+    assert all(i["status"] == "published" for i in body["items"])
+    assert body["has_more"] is False
+
+
+def test_list_pagination(client):
+    p1 = client.get("/api/v1/contents?page=1&page_size=3").json()
+    assert len(p1["items"]) == 3
+    assert p1["total"] == 7
+    assert p1["has_more"] is True
+    p3 = client.get("/api/v1/contents?page=3&page_size=3").json()
+    assert len(p3["items"]) == 1
+    assert p3["has_more"] is False
+
+
+def test_list_keyword_query(client):
+    body = client.get("/api/v1/contents", params={"q": "推理成本"}).json()
+    assert body["total"] >= 1
+    assert any("推理" in i["title"] for i in body["items"])
+
+
+def test_list_keyword_with_facet(client):
+    # keyword + language facet via the in-memory index path
+    body = client.get("/api/v1/contents", params={"q": "EUV", "lang": "en"}).json()
+    assert all(i["lang"] == "en" for i in body["items"])
 
 
 def test_list_filters_by_category_with_descendants(client):
     # tech is a root with children ai-systems / distributed
     res = client.get("/api/v1/contents?category=tech")
-    slugs = {i["category"]["slug"] for i in res.json()}
+    slugs = {i["category"]["slug"] for i in _items(res)}
     assert slugs <= {"ai-systems", "distributed"}
-    assert len(res.json()) >= 3
+    assert res.json()["total"] >= 3
 
 
 def test_list_unknown_category_404(client):
@@ -22,21 +50,21 @@ def test_list_unknown_category_404(client):
 def test_list_filter_tag_topic_type_lang(client):
     assert all(
         any(t["slug"] == "llm" for t in i["tags"])
-        for i in client.get("/api/v1/contents?tag=llm").json()
+        for i in _items(client.get("/api/v1/contents?tag=llm"))
     )
-    assert len(client.get("/api/v1/contents?topic=trust-systems").json()) >= 1
+    assert client.get("/api/v1/contents?topic=trust-systems").json()["total"] >= 1
     assert all(
         i["content_type"] == "video"
-        for i in client.get("/api/v1/contents?content_type=video").json()
+        for i in _items(client.get("/api/v1/contents?content_type=video"))
     )
-    assert all(i["lang"] == "en" for i in client.get("/api/v1/contents?lang=en").json())
+    assert all(i["lang"] == "en" for i in _items(client.get("/api/v1/contents?lang=en")))
 
 
 def test_list_sorts(client):
-    newest = client.get("/api/v1/contents?sort=newest").json()
-    oldest = client.get("/api/v1/contents?sort=oldest").json()
+    newest = _items(client.get("/api/v1/contents?sort=newest"))
+    oldest = _items(client.get("/api/v1/contents?sort=oldest"))
     assert newest[0]["id"] == oldest[-1]["id"]
-    titles = [i["title"] for i in client.get("/api/v1/contents?sort=title").json()]
+    titles = [i["title"] for i in _items(client.get("/api/v1/contents?sort=title"))]
     assert titles == sorted(titles)
 
 

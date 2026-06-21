@@ -5,12 +5,17 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .database import Base, SessionLocal, engine
 from .routers import (
+    admin_router,
     auth_router,
     billing_router,
+    community_router,
     contents_router,
+    crawl_router,
+    payments_router,
     review_router,
     search_router,
     sitemap_router,
+    submissions_router,
     system_router,
     taxonomy_router,
 )
@@ -49,5 +54,10 @@ app.include_router(taxonomy_router.router, prefix=API_PREFIX)
 app.include_router(search_router.router, prefix=API_PREFIX)
 app.include_router(review_router.router, prefix=API_PREFIX)
 app.include_router(billing_router.router, prefix=API_PREFIX)
+app.include_router(payments_router.router, prefix=API_PREFIX)
+app.include_router(community_router.router, prefix=API_PREFIX)
+app.include_router(submissions_router.router, prefix=API_PREFIX)
+app.include_router(crawl_router.router, prefix=API_PREFIX)
+app.include_router(admin_router.router, prefix=API_PREFIX)
 app.include_router(system_router.router, prefix=API_PREFIX)
 app.include_router(sitemap_router.router)  # /sitemap.xml stays at site root

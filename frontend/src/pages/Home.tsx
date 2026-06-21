@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { api, ContentCard } from "../api";
+import { api, ContentCard, Page } from "../api";
 import ContentCardView from "../components/ContentCardView";
 
 export default function Home() {
@@ -9,8 +9,8 @@ export default function Home() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    api<ContentCard[]>("/contents?sort=newest&page_size=6")
-      .then(setLatest)
+    api<Page<ContentCard>>("/contents?sort=newest&page_size=6")
+      .then((d) => setLatest(d.items))
       .catch((e) => setError(String(e.message)));
   }, []);
 

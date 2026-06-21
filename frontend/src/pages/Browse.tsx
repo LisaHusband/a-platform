@@ -1,11 +1,12 @@
-import { useEffect, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
-import { api, Category, ContentCard, Named, Topic } from "../api";
+import { api, Category, ContentCard, Named, Page, Topic } from "../api";
 import ContentCardView from "../components/ContentCardView";
 import { useLocalName } from "../context";
 
 const TYPES = ["article", "report", "series", "video", "audio"];
+const PAGE_SIZE = 10;
 
 export default function Browse() {
   const { t } = useTranslation();
@@ -14,14 +15,17 @@ export default function Browse() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [tags, setTags] = useState<Named[]>([]);
   const [topics, setTopics] = useState<Topic[]>([]);
-  const [contents, setContents] = useState<ContentCard[]>([]);
+  const [data, setData] = useState<Page<ContentCard> | null>(null);
   const [error, setError] = useState("");
+  const [kw, setKw] = useState(params.get("q") ?? "");
 
   const category = params.get("category") ?? "";
   const tag = params.get("tag") ?? "";
   const topic = params.get("topic") ?? "";
   const type = params.get("type") ?? "";
   const lang = params.get("lang") ?? "";
+  const q = params.get("q") ?? "";
+  const page = Number(params.get("page") ?? "1");
 
   useEffect(() => {
     Promise.all([
@@ -44,19 +48,37 @@ export default function Browse() {
     if (topic) qs.set("topic", topic);
     if (type) qs.set("content_type", type);
     if (lang) qs.set("lang", lang);
-    api<ContentCard[]>(`/contents?${qs}`)
-      .then(setContents)
+    if (q) qs.set("q", q);
+    qs.set("page", String(page));
+    qs.set("page_size", String(PAGE_SIZE));
+    if (q) qs.set("sort", "relevance");
+    api<Page<ContentCard>>(`/contents?${qs}`)
+      .then(setData)
       .catch((e) => setError(String(e.message)));
-  }, [category, tag, topic, type, lang]);
+  }, [category, tag, topic, type, lang, q, page]);
 
+  // Changing a filter resets to page 1; goToPage navigates without resetting.
   function setFilter(key: string, value: string) {
     const next = new URLSearchParams(params);
     if (value) next.set(key, value);
     else next.delete(key);
+    next.set("page", "1");
+    setParams(next);
+  }
+  function goToPage(n: number) {
+    const next = new URLSearchParams(params);
+    next.set("page", String(n));
     setParams(next);
   }
 
+  function submitKeyword(e: FormEvent) {
+    e.preventDefault();
+    setFilter("q", kw.trim());
+  }
+
   const roots = categories.filter((c) => c.parent_id === null);
+  const items = data?.items ?? [];
+  const pages = data ? Math.max(1, Math.ceil(data.total / data.page_size)) : 1;
 
   return (
     <div className="page container two-col">
@@ -111,7 +133,14 @@ export default function Browse() {
         </div>
       </aside>
       <main>
-        <div className="toolbar">
+        <form className="toolbar" onSubmit={submitKeyword}>
+          <input
+            className="grow"
+            placeholder={t("browse.keyword")}
+            value={kw}
+            onChange={(e) => setKw(e.target.value)}
+            aria-label={t("browse.keyword")}
+          />
           <label>
             {t("browse.type")}{" "}
             <select value={type} onChange={(e) => setFilter("type", e.target.value)}>
@@ -131,12 +160,28 @@ export default function Browse() {
               <option value="en">English</option>
             </select>
           </label>
-        </div>
+        </form>
+        {data && (
+          <p className="meta">{t("browse.count", { total: data.total })}</p>
+        )}
         {error && <p className="error-msg">{t("common.error")}{error}</p>}
-        {contents.length === 0 && !error && <p>{t("browse.empty")}</p>}
-        {contents.map((c) => (
+        {items.length === 0 && !error && <p>{t("browse.empty")}</p>}
+        {items.map((c) => (
           <ContentCardView key={c.id} content={c} />
         ))}
+        {data && pages > 1 && (
+          <div className="pagination">
+            <button disabled={page <= 1} onClick={() => goToPage(page - 1)}>
+              ←
+            </button>
+            <span>
+              {page} / {pages}
+            </span>
+            <button disabled={!data.has_more} onClick={() => goToPage(page + 1)}>
+              →
+            </button>
+          </div>
+        )}
       </main>
     </div>
   );

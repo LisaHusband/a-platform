@@ -4,6 +4,8 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, ContentCard, ContentDetail } from "../api";
 import ContentCardView from "../components/ContentCardView";
 import Markdown from "../components/Markdown";
+import PaymentModal from "../components/PaymentModal";
+import ReportModal from "../components/ReportModal";
 import { useApp, useLocalName } from "../context";
 
 export default function ContentPage() {
@@ -17,6 +19,8 @@ export default function ContentPage() {
   const [error, setError] = useState("");
   const [reading, setReading] = useState(false);
   const [fontSize, setFontSize] = useState(19);
+  const [paying, setPaying] = useState(false);
+  const [reporting, setReporting] = useState(false);
 
   const load = useCallback(() => {
     api<ContentDetail>(`/contents/${id}`)
@@ -35,17 +39,12 @@ export default function ContentPage() {
     return () => document.body.classList.remove("reading-mode");
   }, [reading, fontSize]);
 
-  async function buy() {
+  function buy() {
     if (!user) {
       navigate("/account");
       return;
     }
-    try {
-      await api(`/billing/purchase/${id}`, { method: "POST" });
-      load();
-    } catch (e) {
-      setError(String((e as Error).message));
-    }
+    setPaying(true);
   }
 
   if (error && !content) {
@@ -79,11 +78,29 @@ export default function ContentPage() {
           {content.has_access ? (
             <span className="ok-msg">{t("content.purchased")}</span>
           ) : (
-            <span className="price-tag">${content.price}</span>
+            <span className="price-tag">¥{content.price}</span>
           )}
         </div>
+
+        {(content.source_domain || content.author_name || content.source_type !== "manual") && (
+          <div className="source-box article-meta-extra">
+            <span className="chip">{content.source_type}</span>
+            {content.author_name && (
+              <span>{t("content.originalAuthor")}: {content.author_name}</span>
+            )}
+            {content.source_url ? (
+              <a href={content.source_url} target="_blank" rel="noreferrer noopener">
+                {t("content.viewSource")}: {content.source_domain || content.source_url} ↗
+              </a>
+            ) : (
+              content.source_domain && <span>{t("content.source")}: {content.source_domain}</span>
+            )}
+          </div>
+        )}
+
         <div className="toolbar article-meta-extra" style={{ marginTop: 12 }}>
           <button onClick={() => setReading(true)}>{t("content.readingMode")}</button>
+          <button onClick={() => setReporting(true)}>⚐ {t("report.button")}</button>
         </div>
 
         {error && <p className="error-msg">{t("common.error")}{error}</p>}
@@ -135,6 +152,24 @@ export default function ContentPage() {
             <ContentCardView key={c.id} content={c} />
           ))}
         </section>
+      )}
+
+      {paying && (
+        <PaymentModal
+          kind="content"
+          refId={String(content.id)}
+          title={content.title}
+          amount={content.price}
+          onClose={() => setPaying(false)}
+          onSuccess={() => {
+            setPaying(false);
+            load();
+          }}
+        />
+      )}
+
+      {reporting && (
+        <ReportModal contentId={content.id} onClose={() => setReporting(false)} />
       )}
     </div>
   );

@@ -17,6 +17,7 @@ interface AppCtx {
   user: User | null;
   login: (token: string, user: User) => void;
   logout: () => void;
+  refreshUser: () => void;
 }
 
 const Ctx = createContext<AppCtx>(null!);
@@ -54,12 +55,29 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setToken(null);
     setUser(null);
   }, []);
+  const refreshUser = useCallback(() => {
+    if (getToken()) api<User>("/auth/me").then(setUser).catch(() => {});
+  }, []);
 
   return (
-    <Ctx.Provider value={{ theme, toggleTheme, user, login, logout }}>
+    <Ctx.Provider value={{ theme, toggleTheme, user, login, logout, refreshUser }}>
       {children}
     </Ctx.Provider>
   );
+}
+
+/** Tools a role can access in the workbench / nav. Admin sees everything. */
+export function roleCan(role: string | undefined, capability: string): boolean {
+  if (!role) return false;
+  const matrix: Record<string, string[]> = {
+    submit: ["author", "editor", "admin"],
+    reviewTier2: ["editor", "admin"],
+    reviewTier3: ["expert", "admin"],
+    publish: ["editor", "admin"],
+    moderate: ["editor", "admin"],
+    boards: ["editor", "admin"],
+  };
+  return role === "admin" || (matrix[capability]?.includes(role) ?? false);
 }
 
 export const useApp = () => useContext(Ctx);

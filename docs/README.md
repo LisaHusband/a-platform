@@ -10,6 +10,7 @@ This directory centralizes all A-PLATFORM project documentation, provided biling
 | 文档 / Document | 说明 / Description |
 |---|---|
 | [需求整理 · Requirements](需求整理.md) | 产品定位与核心理念 / Product vision and core principles |
+| [开发 PRD · Developer PRD](planning.md) | 采集/投稿/审核/合规需求 / Crawl, submission, review & compliance PRD |
 | [贡献指南 · Contributing](CONTRIBUTING.md) | 分支模型、开发流程、提交规范 / Branch model, workflow, commit rules |
 | [行为准则 · Code of Conduct](CODE_OF_CONDUCT.md) | 社区行为规范 / Community standards |
 | [安全策略 · Security Policy](SECURITY.md) | 漏洞披露流程 / Vulnerability disclosure |

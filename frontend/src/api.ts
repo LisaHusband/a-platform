@@ -20,6 +20,15 @@ export interface User extends Entity {
   email: string;
   name: string;
   role: string;
+  balance: number;
+}
+// Generic pagination envelope; mirrors backend Page[T].
+export interface Page<T> {
+  items: T[];
+  total: number;
+  page: number;
+  page_size: number;
+  has_more: boolean;
 }
 export type AuthorRef = Pick<User, "id" | "name">;
 export interface ContentCard extends Entity {
@@ -36,6 +45,11 @@ export interface ContentCard extends Entity {
   category: Category | null;
   tags: Named[];
   topics: Named[];
+  source_type: string;
+  source_url: string;
+  source_domain: string;
+  author_name: string;
+  quality_score: number;
 }
 export interface ContentDetail extends ContentCard {
   body: string | null;
@@ -71,6 +85,102 @@ export interface Subscription extends Entity {
 export interface Purchase extends Entity {
   content: ContentCard;
   price_paid: number;
+  created_at: string;
+}
+
+// --- Payments ---------------------------------------------------------------
+export interface Wallet {
+  balance: number;
+  currency: string;
+}
+export type PaymentMethod = "balance" | "alipay" | "paypal";
+export interface PaymentOrder extends Entity {
+  kind: string;
+  ref: string;
+  amount: number;
+  method: PaymentMethod;
+  status: string;
+  provider_txn: string;
+  created_at: string;
+}
+export interface PaymentCreateOut {
+  order: PaymentOrder;
+  approval_url: string | null;
+  qr_code: string | null;
+}
+
+// --- Community (Tieba-style) ------------------------------------------------
+export type PosterRef = Pick<User, "id" | "name" | "role">;
+export interface Board extends Entity {
+  slug: string;
+  name: string;
+  description: string;
+  thread_count: number;
+}
+export interface ThreadCard extends Entity {
+  board_id: number;
+  title: string;
+  author: PosterRef | null;
+  views: number;
+  reply_count: number;
+  like_count: number;
+  is_pinned: number;
+  is_locked: number;
+  is_featured: number;
+  created_at: string;
+  last_activity_at: string;
+}
+export interface ThreadDetail extends ThreadCard {
+  body: string;
+}
+export interface CommunityPost extends Entity {
+  floor: number;
+  body: string;
+  author: PosterRef | null;
+  like_count: number;
+  created_at: string;
+}
+
+// --- Crawling / admin / takedowns -------------------------------------------
+export interface CrawlSite extends Entity {
+  domain: string;
+  start_url: string;
+  sitemap_url: string;
+  allowed: number;
+  is_blacklisted: number;
+  crawl_delay: number;
+  max_concurrency: number;
+}
+export interface CrawlTask extends Entity {
+  domain: string;
+  url: string;
+  status: string;
+  retry_count: number;
+  robots_decision: string;
+  last_error: string;
+  content_id: number | null;
+  created_at: string;
+}
+export interface RobotsCheck {
+  allowed: boolean;
+  decision: string;
+  crawl_delay: number | null;
+  robots_url: string;
+}
+export interface ReviewRecord extends Entity {
+  action: string;
+  comment: string;
+  before_status: string;
+  after_status: string;
+  reviewer: AuthorRef | null;
+  created_at: string;
+}
+export interface Takedown extends Entity {
+  content_id: number;
+  requester_email: string;
+  reason: string;
+  status: string;
+  resolution: string;
   created_at: string;
 }
 

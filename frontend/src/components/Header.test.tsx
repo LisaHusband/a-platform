@@ -45,11 +45,25 @@ describe("Header", () => {
     await waitFor(() => expect(screen.getByText("浏览")).toBeInTheDocument());
   });
 
-  it("shows the logged-in user's name", async () => {
+  it("shows the logged-in user's name and wallet badge", async () => {
     await setLang("zh");
     setToken("tok");
-    mockFetch({ "/auth/me": { id: 1, email: "a@b.c", name: "登录者", role: "reader" } });
+    mockFetch({
+      "/auth/me": { id: 1, email: "a@b.c", name: "登录者", role: "reader", balance: 1000 },
+    });
     renderApp(<Header />);
     await waitFor(() => expect(screen.getByText("登录者")).toBeInTheDocument());
+    expect(screen.getByText("¥1000")).toBeInTheDocument();
+  });
+
+  it("shows role-specific nav for an editor", async () => {
+    await setLang("zh");
+    setToken("tok");
+    mockFetch({
+      "/auth/me": { id: 3, email: "e@a.dev", name: "编辑", role: "editor", balance: 1000 },
+    });
+    renderApp(<Header />);
+    await waitFor(() => expect(screen.getByText("工作台")).toBeInTheDocument());
+    expect(screen.getByText("投稿")).toBeInTheDocument();
   });
 });

@@ -61,42 +61,79 @@ describe("ContentPage", () => {
     await waitFor(() => expect(screen.getByText("账户页")).toBeInTheDocument());
   });
 
-  it("completes a purchase and unlocks the body when logged in", async () => {
+  it("completes a wallet purchase and unlocks the body", async () => {
     await setLang("zh");
     setToken("tok");
     const user = userEvent.setup();
     let purchased = false;
     mockFetch({
-      "/auth/me": { id: 1, email: "a@b.c", name: "买家", role: "reader" },
+      "/auth/me": { id: 1, email: "a@b.c", name: "买家", role: "reader", balance: 1000 },
       "/contents/1/related": [],
-      "POST /billing/purchase/1": () => {
+      "POST /payments": () => {
         purchased = true;
-        return { id: 1, content: card, price_paid: 12, created_at: "" };
+        return { order: { id: 1, status: "paid", method: "balance" }, approval_url: null, qr_code: null };
       },
       "/contents/1": () => (purchased ? unlockedDetail : lockedDetail),
     });
     renderApp(<Harness />, { route: "/content/1" });
     await waitFor(() => expect(screen.getByText(/购买本篇/)).toBeInTheDocument());
     await user.click(screen.getByText(/购买本篇/));
+    // payment modal opens; pay with default wallet method
+    await waitFor(() => expect(screen.getByText(/选择支付方式/)).toBeInTheDocument());
+    await user.click(screen.getByRole("button", { name: /立即支付/ }));
     await waitFor(() =>
       expect(screen.getByText(/完整的正文内容在此/)).toBeInTheDocument(),
     );
   });
 
-  it("surfaces an error when the purchase call fails", async () => {
+  it("runs the alipay sandbox flow with confirm callback", async () => {
+    await setLang("zh");
+    setToken("tok");
+    const user = userEvent.setup();
+    let confirmed = false;
+    mockFetch({
+      "/auth/me": { id: 1, email: "a@b.c", name: "买家", role: "reader", balance: 1000 },
+      "/contents/1/related": [],
+      "POST /payments/1/confirm": () => {
+        confirmed = true;
+        return { status: "paid" };
+      },
+      "POST /payments": {
+        order: { id: 1, status: "created", method: "alipay" },
+        approval_url: "https://sandbox.alipay.example/x",
+        qr_code: "https://sandbox.alipay.example/x",
+      },
+      "/contents/1": () => (confirmed ? unlockedDetail : lockedDetail),
+    });
+    renderApp(<Harness />, { route: "/content/1" });
+    await waitFor(() => expect(screen.getByText(/购买本篇/)).toBeInTheDocument());
+    await user.click(screen.getByText(/购买本篇/));
+    await user.click(screen.getByText(/支付宝（沙箱）/));
+    await user.click(screen.getByRole("button", { name: /立即支付/ }));
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /我已完成支付/ })).toBeInTheDocument(),
+    );
+    await user.click(screen.getByRole("button", { name: /我已完成支付/ }));
+    await waitFor(() =>
+      expect(screen.getByText(/完整的正文内容在此/)).toBeInTheDocument(),
+    );
+  });
+
+  it("cancels the payment modal", async () => {
     await setLang("zh");
     setToken("tok");
     const user = userEvent.setup();
     mockFetch({
-      "/auth/me": { id: 1, email: "a@b.c", name: "买家", role: "reader" },
+      "/auth/me": { id: 1, email: "a@b.c", name: "买家", role: "reader", balance: 1000 },
       "/contents/1/related": [],
-      "POST /billing/purchase/1": new Error("支付失败"),
       "/contents/1": lockedDetail,
     });
     renderApp(<Harness />, { route: "/content/1" });
     await waitFor(() => expect(screen.getByText(/购买本篇/)).toBeInTheDocument());
     await user.click(screen.getByText(/购买本篇/));
-    await waitFor(() => expect(screen.getByText(/支付失败/)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/选择支付方式/)).toBeInTheDocument());
+    await user.click(screen.getByRole("button", { name: /取消/ }));
+    await waitFor(() => expect(screen.queryByText(/选择支付方式/)).toBeNull());
   });
 
   it("handles content without a publish date", async () => {
@@ -118,5 +155,49 @@ describe("ContentPage", () => {
     mockFetch({ "/contents/1/related": [], "/contents/1": new Error("未找到") });
     renderApp(<Harness />, { route: "/content/1" });
     await waitFor(() => expect(screen.getByText(/未找到/)).toBeInTheDocument());
+  });
+
+  it("shows source domain without a link when no source URL", async () => {
+    await setLang("zh");
+    mockFetch({
+      "/contents/1/related": [],
+      "/contents/1": {
+        ...unlockedDetail,
+        source_type: "rss",
+        source_url: "",
+        source_domain: "feeds.example.com",
+      },
+    });
+    renderApp(<Harness />, { route: "/content/1" });
+    await waitFor(() => expect(screen.getByText(/feeds.example.com/)).toBeInTheDocument());
+    expect(screen.queryByText(/查看原文/)).not.toBeInTheDocument();
+  });
+
+  it("shows source attribution and submits a takedown report", async () => {
+    await setLang("zh");
+    const user = userEvent.setup();
+    let reported = false;
+    mockFetch({
+      "/contents/1/related": [],
+      "/contents/1": {
+        ...unlockedDetail,
+        source_type: "crawl",
+        source_url: "https://example.com/a",
+        source_domain: "example.com",
+        author_name: "原作者甲",
+      },
+      "POST /admin/takedowns": () => {
+        reported = true;
+        return { id: 1, content_id: 1, status: "open" };
+      },
+    });
+    renderApp(<Harness />, { route: "/content/1" });
+    await waitFor(() => expect(screen.getByText(/查看原文/)).toBeInTheDocument());
+    expect(screen.getByText(/原作者甲/)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /举报\/下架/ }));
+    await user.type(screen.getByLabelText(/请说明原因/), "侵权内容");
+    await user.click(screen.getByRole("button", { name: "提交请求" }));
+    await waitFor(() => expect(reported).toBe(true));
+    expect(screen.getByText(/已收到/)).toBeInTheDocument();
   });
 });

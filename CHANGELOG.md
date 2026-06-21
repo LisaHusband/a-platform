@@ -8,7 +8,30 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
-_暂无 / Nothing yet._
+### 新增 · Added
+
+- **合规爬虫 / Compliant crawler**（[crawler](backend/app/services/crawler.py)）：robots.txt 校验（disallow + crawl-delay，缺失视为放行）、HTML 正文抽取、URL 与内容指纹（sha256）去重、抓取失败重试与审计（CrawlTask）。
+  robots.txt enforcement (disallow + crawl-delay, missing => allowed), HTML extraction, URL + content-fingerprint dedup, retry accounting and audit trail.
+- **多来源投稿 / Multi-source submissions**（`/api/v1/submissions`）：粘贴正文、提交 URL（走合规爬虫）、上传文件（TXT/MD 抽取正文，其余留存元信息），统一进入待审队列。
+  Paste, URL (via the crawler), and file upload, all entering the review queue.
+- **站点与抓取管理 / Crawl & site management**（`/api/v1/crawl`）：站点配置（黑白名单、抓取间隔）、抓取入队、robots 预检。
+- **管理后台 / Admin console**（`/api/v1/admin`）：内容审核（approve/reject/needs_fix/archive/reclassify/retag/set_quality）含审计记录（ReviewRecord）、下架/投诉受理（自动归档并移出索引）。
+- **来源标注与举报 / Provenance & takedowns**：内容详情展示来源域名/原作者/原文链接；任何人可提交举报/下架请求。
+- **前端 / Frontend**：投稿页三种来源标签页、管理控制台（审核/抓取/站点/下架四个分栏）、举报弹窗。
+- **角色化工作台 / Role-based workbench**：导航与 `/workbench` 按角色（读者/作者/编辑/专家/管理员）展示不同入口；编辑/专家内置审核队列。
+  Nav and `/workbench` surface different tools per role; editors/experts get an inline review queue.
+- **沙箱支付 / Sandbox payments**：余额、支付宝、PayPal 三种方式（`/api/v1/payments`），测试用户默认 ¥1000 免费余额；钱包与支付记录页。
+  Wallet balance, Alipay and PayPal flows; test users start with ¥1000 free credit; wallet + order history UI.
+- **分类索引分页与关键词检索 / Paginated keyword catalog**：`/api/v1/contents` 返回分页信封并支持 `q` 关键词，复合数据库索引 + 内存倒排索引面向百万级毫秒响应。
+  Paginated envelope with keyword `q`, backed by composite DB indexes and the in-memory inverted index for million-scale, millisecond responses.
+- **贴吧式社区 / Tieba-style community**（`/api/v1/community`）：吧、主题帖、楼层回复、点赞、置顶/精华/锁定、分页与搜索；前端社区/板块/帖子页。
+  Boards, threads, floor replies, likes, pin/feature/lock moderation, pagination and search, with community pages.
+- **UI/UX 重设 / UI revamp**：渐变品牌色、卡片悬浮动效、支付弹窗、钱包卡片、角色徽章等。
+  Gradient branding, motion, payment modal, wallet card, role badges.
+
+### 变更 · Changed
+
+- 计价货币由 USD 调整为 CNY（¥）/ pricing currency switched from USD to CNY (¥).
 
 ## [0.2.0] - 2026-06-13 — 自动化与生产就绪 / Automation & production-readiness
 

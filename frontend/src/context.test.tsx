@@ -2,7 +2,7 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { setToken } from "./api";
-import { AppProvider, useApp, useLocalName } from "./context";
+import { AppProvider, roleCan, useApp, useLocalName } from "./context";
 import { mockFetch } from "./test/utils";
 import { topic } from "./test/fixtures";
 
@@ -57,6 +57,18 @@ describe("AppProvider", () => {
     mockFetch({ "/auth/me": new Error("401") });
     renderHook(() => useApp(), { wrapper });
     await waitFor(() => expect(localStorage.getItem("ap.token")).toBeNull());
+  });
+});
+
+describe("roleCan", () => {
+  it("grants admin everything and gates others by capability", () => {
+    expect(roleCan("admin", "publish")).toBe(true);
+    expect(roleCan("editor", "reviewTier2")).toBe(true);
+    expect(roleCan("expert", "reviewTier3")).toBe(true);
+    expect(roleCan("author", "submit")).toBe(true);
+    expect(roleCan("reader", "submit")).toBe(false);
+    expect(roleCan(undefined, "submit")).toBe(false);
+    expect(roleCan("editor", "unknown-cap")).toBe(false);
   });
 });
 

@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
-import { card, category, rootCategory, tag, topic } from "../test/fixtures";
+import { card, category, page, rootCategory, tag, topic } from "../test/fixtures";
 import { mockFetch, renderApp, setLang } from "../test/utils";
 import Browse from "./Browse";
 
@@ -10,7 +10,7 @@ function routes(contents = [card]) {
     "/taxonomy/categories": [rootCategory, category],
     "/taxonomy/tags": [tag],
     "/taxonomy/topics": [topic],
-    "/contents": contents,
+    "/contents": page(contents),
   };
 }
 
@@ -88,6 +88,29 @@ describe("Browse page", () => {
     await user.click(sidebar().getByText("AI 基础设施"));
     await user.click(sidebar().getByText("全部"));
     await waitFor(() => expect(sidebar().getByText("技术")).toBeInTheDocument());
+  });
+
+  it("searches by keyword and paginates", async () => {
+    await setLang("zh");
+    const user = userEvent.setup();
+    const fetchMock = mockFetch({
+      "/taxonomy/categories": [rootCategory, category],
+      "/taxonomy/tags": [tag],
+      "/taxonomy/topics": [topic],
+      "/contents": page([card], 30),
+    });
+    renderApp(<Browse />, { route: "/browse" });
+    await waitFor(() => expect(screen.getByText("测试内容标题")).toBeInTheDocument());
+    await user.type(screen.getByPlaceholderText(/搜索关键词/), "推理{Enter}");
+    await waitFor(() =>
+      expect(
+        fetchMock.mock.calls.some((c) => decodeURIComponent(String(c[0])).includes("q=推理")),
+      ).toBe(true),
+    );
+    await user.click(screen.getByText("→"));
+    await waitFor(() =>
+      expect(fetchMock.mock.calls.some((c) => String(c[0]).includes("page=2"))).toBe(true),
+    );
   });
 
   it("shows empty state when no content", async () => {

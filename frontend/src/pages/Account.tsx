@@ -1,7 +1,8 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { api, Purchase, Subscription, Topic, User } from "../api";
+import { api, PaymentOrder, Purchase, Subscription, Topic, User } from "../api";
 import ContentCardView from "../components/ContentCardView";
+import PaymentModal from "../components/PaymentModal";
 import { useApp, useLocalName } from "../context";
 
 export default function Account() {
@@ -43,7 +44,7 @@ function AuthForms({ onAuth }: { onAuth: (token: string, user: User) => void }) 
   }
 
   return (
-    <div>
+    <div className="auth-card">
       <div className="toolbar">
         <button className={mode === "login" ? "primary" : ""} onClick={() => setMode("login")}>
           {t("account.login")}
@@ -92,35 +93,39 @@ function Dashboard() {
   const name = useLocalName();
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [subs, setSubs] = useState<Subscription[]>([]);
+  const [orders, setOrders] = useState<PaymentOrder[]>([]);
   const [topics, setTopics] = useState<Topic[]>([]);
   const [topicSlug, setTopicSlug] = useState("");
-  const [error, setError] = useState("");
+  const [payRef, setPayRef] = useState<string | null>(null);
 
   const load = useCallback(() => {
     api<Purchase[]>("/billing/purchases").then(setPurchases).catch(() => {});
     api<Subscription[]>("/billing/subscriptions").then(setSubs).catch(() => {});
+    api<PaymentOrder[]>("/payments").then(setOrders).catch(() => {});
     api<Topic[]>("/taxonomy/topics").then(setTopics).catch(() => {});
   }, []);
   useEffect(load, [load]);
 
-  async function subscribe(plan: "monthly" | "topic") {
-    setError("");
-    try {
-      await api("/billing/subscribe", {
-        method: "POST",
-        body: { plan, topic_slug: plan === "topic" ? topicSlug : null },
-      });
-      load();
-    } catch (e) {
-      setError(String((e as Error).message));
-    }
-  }
+  const payAmount = payRef === "monthly" ? 30 : 12;
 
   return (
     <div>
-      <h1>
-        {user!.name} <span className="chip type">{user!.role}</span>
-      </h1>
+      <div className="profile-head">
+        <div className="avatar">{user!.name.slice(0, 1)}</div>
+        <div>
+          <h1 style={{ margin: 0 }}>{user!.name}</h1>
+          <span className={`chip role-${user!.role}`}>{t(`roles.${user!.role}`)}</span>
+        </div>
+      </div>
+
+      <div className="wallet-card">
+        <div>
+          <div className="meta">{t("wallet.balance")}</div>
+          <div className="wallet-amount">¥{user!.balance.toFixed(2)}</div>
+          <div className="meta">{t("wallet.free")}</div>
+        </div>
+        <span className="wallet-emoji">💰</span>
+      </div>
 
       <h2>{t("account.subscriptions")}</h2>
       {subs.length === 0 && <p className="meta">{t("account.none")}</p>}
@@ -133,7 +138,7 @@ function Dashboard() {
         </div>
       ))}
       <div className="toolbar">
-        <button className="primary" onClick={() => subscribe("monthly")}>
+        <button className="primary" onClick={() => setPayRef("monthly")}>
           {t("account.subscribeMonthly")}
         </button>
         <select value={topicSlug} onChange={(e) => setTopicSlug(e.target.value)}>
@@ -144,17 +149,55 @@ function Dashboard() {
             </option>
           ))}
         </select>
-        <button disabled={!topicSlug} onClick={() => subscribe("topic")}>
+        <button disabled={!topicSlug} onClick={() => setPayRef(`topic:${topicSlug}`)}>
           {t("account.subscribeTopic")}
         </button>
       </div>
-      {error && <p className="error-msg">{error}</p>}
 
       <h2>{t("account.purchases")}</h2>
       {purchases.length === 0 && <p className="meta">{t("account.none")}</p>}
       {purchases.map((p) => (
         <ContentCardView key={p.id} content={p.content} />
       ))}
+
+      <h2>{t("wallet.orders")}</h2>
+      {orders.length === 0 && <p className="meta">{t("wallet.none")}</p>}
+      {orders.length > 0 && (
+        <table className="orders">
+          <thead>
+            <tr>
+              <th>{t("wallet.amount")}</th>
+              <th>{t("wallet.method")}</th>
+              <th>{t("wallet.status")}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {orders.map((o) => (
+              <tr key={o.id}>
+                <td>¥{o.amount}</td>
+                <td>{t(`pay.${o.method}`)}</td>
+                <td>
+                  <span className={`badge status-${o.status}`}>{o.status}</span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+
+      {payRef && (
+        <PaymentModal
+          kind="subscription"
+          refId={payRef}
+          title={payRef === "monthly" ? t("account.subscribeMonthly") : t("account.subscribeTopic")}
+          amount={payAmount}
+          onClose={() => setPayRef(null)}
+          onSuccess={() => {
+            setPayRef(null);
+            load();
+          }}
+        />
+      )}
     </div>
   );
 }

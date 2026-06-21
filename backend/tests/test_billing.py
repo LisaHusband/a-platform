@@ -6,7 +6,7 @@ from app.services.access import has_access
 
 def test_pricing(client):
     p = client.get("/api/v1/billing/pricing").json()
-    assert p["monthly"] > 0 and p["topic"] > 0 and p["currency"] == "USD"
+    assert p["monthly"] > 0 and p["topic"] > 0 and p["currency"] == "CNY"
 
 
 def test_purchase_then_access(client, reader_headers):
