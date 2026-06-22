@@ -10,15 +10,12 @@ from sqlalchemy.orm import Session
 
 from .auth import hash_password
 from .models import (
-    Board,
     Category,
     Content,
     ContentRelation,
     CrawlSite,
-    Post,
     Subscription,
     Tag,
-    Thread,
     Topic,
     User,
 )
@@ -248,72 +245,6 @@ def seed_if_empty(db: Session) -> None:
             topic_id=topics["trust-systems"].id,
             expires_at=now + timedelta(days=30),
         )
-    )
-
-    # --- 社区演示数据 / community demo data ---
-    boards = {
-        "ai-infra": Board(
-            slug="ai-infra",
-            name="AI 基础设施吧",
-            description="讨论芯片、推理、训练集群等 AI 基础设施话题。",
-            thread_count=0,
-        ),
-        "research": Board(
-            slug="research",
-            name="研究方法吧",
-            description="研究方法、数据与可复现性讨论。",
-            thread_count=0,
-        ),
-    }
-    db.add_all(boards.values())
-    db.flush()
-
-    def make_thread(board_key, author_key, title, body, replies, *, pinned=0, featured=0):
-        board = boards[board_key]
-        thread = Thread(
-            board_id=board.id,
-            author_id=users[author_key].id,
-            title=title,
-            body=body,
-            is_pinned=pinned,
-            is_featured=featured,
-            reply_count=len(replies),
-            like_count=len(replies),
-            last_activity_at=now,
-        )
-        db.add(thread)
-        db.flush()
-        board.thread_count += 1
-        for i, (who, text) in enumerate(replies, start=2):
-            db.add(
-                Post(
-                    thread_id=thread.id,
-                    author_id=users[who].id,
-                    body=text,
-                    floor=i,
-                )
-            )
-        return thread
-
-    make_thread(
-        "ai-infra", "author",
-        "【置顶】本吧规则：理性讨论，引用来源",
-        "欢迎来到 AI 基础设施吧。发帖请尽量附上数据与来源，保持理性、就事论事。",
-        [("reader", "支持，期待高质量讨论。"), ("expert", "建议补充一个论文引用规范。")],
-        pinned=1, featured=1,
-    )
-    make_thread(
-        "ai-infra", "reader",
-        "H100 与国产卡推理性价比怎么看？",
-        "最近在做推理选型，想听听大家在单位 token 成本上的实测经验。",
-        [("author", "可以参考站内《大模型推理成本》报告。"), ("editor", "注意区分峰值与稳态利用率。")],
-    )
-    make_thread(
-        "research", "expert",
-        "可复现性清单：你发论文前会检查哪些项？",
-        "整理一份发布前自查清单，欢迎补充。",
-        [("reader", "数据与代码归档链接。")],
-        featured=1,
     )
 
     # --- 爬虫站点演示 / demo crawl site ---

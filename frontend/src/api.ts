@@ -109,38 +109,6 @@ export interface PaymentCreateOut {
   qr_code: string | null;
 }
 
-// --- Community (Tieba-style) ------------------------------------------------
-export type PosterRef = Pick<User, "id" | "name" | "role">;
-export interface Board extends Entity {
-  slug: string;
-  name: string;
-  description: string;
-  thread_count: number;
-}
-export interface ThreadCard extends Entity {
-  board_id: number;
-  title: string;
-  author: PosterRef | null;
-  views: number;
-  reply_count: number;
-  like_count: number;
-  is_pinned: number;
-  is_locked: number;
-  is_featured: number;
-  created_at: string;
-  last_activity_at: string;
-}
-export interface ThreadDetail extends ThreadCard {
-  body: string;
-}
-export interface CommunityPost extends Entity {
-  floor: number;
-  body: string;
-  author: PosterRef | null;
-  like_count: number;
-  created_at: string;
-}
-
 // --- Crawling / admin / takedowns -------------------------------------------
 export interface CrawlSite extends Entity {
   domain: string;

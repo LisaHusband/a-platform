@@ -28,7 +28,6 @@ export default function Header() {
         <nav className="nav">
           <NavLink to="/browse">{t("nav.browse")}</NavLink>
           <NavLink to="/graph">{t("nav.graph")}</NavLink>
-          <NavLink to="/community">{t("nav.community")}</NavLink>
           {canSubmit && <NavLink to="/publish">{t("nav.publish")}</NavLink>}
           {hasWorkbench && <NavLink to="/workbench">{t("nav.workbench")}</NavLink>}
           {canAdmin && <NavLink to="/admin">{t("nav.admin")}</NavLink>}

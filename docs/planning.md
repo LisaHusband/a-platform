@@ -562,3 +562,75 @@
 ## 15. 一句话总结
 
 本项目是一个遵守 robots.txt、支持用户投稿、以人工/规则审核为核心、通过分类索引展示的高质量内容基础设施，而不是社交平台或推荐流产品。
+
+---
+
+## 16. 回归反思：从创新到模仿，再到回归创新 · Reflection: From Innovation to Imitation and Back
+
+> *本章节为项目发展中一次重要的自我校正记录。*
+
+### 16.1 初始阶段：清晰的创新蓝图
+
+项目的起点是明确的 —— 构建一个"去算法化、非社交化、主动探索型的高质量数字内容基础设施"。需求文档（`需求整理.md`）中明确列出了五大核心理念：
+
+1. **去推荐算法** — 不使用个性化推荐、Feed 流、用户画像
+2. **强分类索引体系** — 以分类/标签/Topic/知识图谱组织内容
+3. **高质量内容优先** — 拒绝 AI 水文、标题党、情绪化内容
+4. **完全付费制** — 不依赖广告，不追求海量 DAU
+5. **非社交化** — 不提供私信、评论区社交、点赞排行、粉丝系统、社交关系链
+
+这些原则构成了项目的核心护城河：**内容可信度 + 信息架构能力**，而非推荐算法或用户规模。
+
+### 16.2 滑向模仿：贴吧式社区的引入
+
+然而，在后续开发中，项目引入了**贴吧式社区功能**（Board / Thread / Post / Like），具体表现为：
+
+- **吧（Board）**：类似贴吧的板块组织
+- **主题帖（Thread）**：含标题+正文的讨论帖，附带浏览数、回复数、点赞数
+- **楼层回复（Post）**：楼层式回帖，支持点赞
+- **社区管理功能**：置顶（pin）、加精（feature）、锁定（lock）
+- **工作台版务入口**：社区版务（moderate）、板块管理（boards）
+
+这直接违背了需求文档中明确列出的禁令："**不提供评论区社交、点赞排行、粉丝系统、社交关系链、社区情绪互动**"。
+
+### 16.3 为何会走到这一步：心路历程分析
+
+本意并非模仿。初始阶段有大量积极或消极的反馈，项目方向清晰。然而：
+
+1. **执行周期拉长**：由于注意力分散到娱乐或其他事务，项目执行周期被显著拉长。反馈的影响逐渐消减，最初对创新方向的坚定信念在时间流逝中被稀释。
+
+2. **惰性增强**：当创新路径遇到困难（如冷启动难、内容供给稀缺、审核成本高），而熟悉的社交化模式（贴吧、论坛）在记忆中更易检索、更容易实现时，惰性推动开发者滑向了模仿。
+
+3. **反馈真空**：长时间缺乏外部反馈的矫正，使得"做一个社区板块"这种看似无害的功能添加变得理所当然。热度和点赞是熟悉的交互模式，实现它们比坚守"去社交化"更需要克制力。
+
+4. **消极反馈的唤醒**：当后续消极反馈出现，明确指出社区功能与初始宗旨的矛盾时，才意识到已经偏离了航线。这正是反思和纠正的契机。
+
+### 16.4 纠正行动（v0.2.1）
+
+作为对上述偏差的回应，执行以下纠正：
+
+- **从后端的 models.py 中移除** Board、Thread、Post、Like 模型及其关联
+- **从后端的路由中移除** `community_router.py` 及对应挂载
+- **从前端的 App.tsx 中移除** `/community`、`/community/:slug`、`/thread/:id` 路由
+- **从前端的 API 类型中移除** Board、ThreadCard、ThreadDetail、CommunityPost、PosterRef
+- **从前端的 i18n 中移除** 所有社区相关文案（中英文）
+- **从工作台中移除** 社区版务和板块管理入口
+- **从前端的角色能力矩阵中移除** moderate 和 boards 能力
+
+### 16.5 教训
+
+1. **原则写在纸上比记在心里更可靠**：需求文档中已明确列出非目标，但执行中仍需反复对照。
+
+2. **短周期迭代比长周期拉锯更安全**：执行周期越长，初始信念越容易被消磨，惯性越容易将项目带偏。
+
+3. **困难是试金石**：创新路径的困难（如冷启动）不应成为滑向模仿的借口。模仿路径看似更容易，实则背离了项目立身之本。
+
+4. **消极反馈是礼物**：当有声音指出方向偏差时，应当感谢这些反馈 —— 它们帮助项目在彻底偏离之前刹车。
+
+### 16.6 英文摘要 · English Abstract
+
+> The project's original vision was clear: a non-social, recommendation-free, exploration-driven high-quality content infrastructure. Five core principles were explicitly documented, including "no social features — no comments, no likes, no follower systems."
+>
+> However, during development, Tieba-style community features (boards, threads, post replies, likes, pin/feature/lock management) were introduced — directly contradicting the documented principles. This happened not out of intent, but due to a prolonged execution cycle where initial feedback faded, inertia grew, and the comfort of familiar social patterns (easier to implement) overtook the discipline of innovation.
+>
+> Negative feedback flagged the inconsistency, prompting this correction. The community features have been surgically removed from backend models, routes, frontend routes, API types, i18n strings, workbench entries, and the role capability matrix. The lesson: principles written down must be revisited during execution; shorter iteration cycles prevent drift; difficulty in the innovative path is not an excuse to slide into imitation.

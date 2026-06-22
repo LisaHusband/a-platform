@@ -8,7 +8,6 @@ from .routers import (
     admin_router,
     auth_router,
     billing_router,
-    community_router,
     contents_router,
     crawl_router,
     payments_router,
@@ -55,7 +54,6 @@ app.include_router(search_router.router, prefix=API_PREFIX)
 app.include_router(review_router.router, prefix=API_PREFIX)
 app.include_router(billing_router.router, prefix=API_PREFIX)
 app.include_router(payments_router.router, prefix=API_PREFIX)
-app.include_router(community_router.router, prefix=API_PREFIX)
 app.include_router(submissions_router.router, prefix=API_PREFIX)
 app.include_router(crawl_router.router, prefix=API_PREFIX)
 app.include_router(admin_router.router, prefix=API_PREFIX)

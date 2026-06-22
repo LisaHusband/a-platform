@@ -24,10 +24,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
   Wallet balance, Alipay and PayPal flows; test users start with ¥1000 free credit; wallet + order history UI.
 - **分类索引分页与关键词检索 / Paginated keyword catalog**：`/api/v1/contents` 返回分页信封并支持 `q` 关键词，复合数据库索引 + 内存倒排索引面向百万级毫秒响应。
   Paginated envelope with keyword `q`, backed by composite DB indexes and the in-memory inverted index for million-scale, millisecond responses.
-- **贴吧式社区 / Tieba-style community**（`/api/v1/community`）：吧、主题帖、楼层回复、点赞、置顶/精华/锁定、分页与搜索；前端社区/板块/帖子页。
-  Boards, threads, floor replies, likes, pin/feature/lock moderation, pagination and search, with community pages.
 - **UI/UX 重设 / UI revamp**：渐变品牌色、卡片悬浮动效、支付弹窗、钱包卡片、角色徽章等。
   Gradient branding, motion, payment modal, wallet card, role badges.
+
+### 移除 · Removed
+
+- **贴吧式社区 / Tieba-style community**：经回归反思确认，该功能违背平台「高信噪比、去社交干扰」的核心宗旨，避免用户滑向短平快的社交行为模式。移除后端 `Board`/`Thread`/`Post`/`Like` 模型、`community_router`、以及前端社区/板块/帖子页面与路由。
+  Regressively removed: confirmed to contradict the platform's "high signal, no social noise" core principle by encouraging shallow social interactions. Removed backend models, router, and all frontend community pages/routes.
 
 ### 变更 · Changed
 

@@ -74,8 +74,6 @@ export function roleCan(role: string | undefined, capability: string): boolean {
     reviewTier2: ["editor", "admin"],
     reviewTier3: ["expert", "admin"],
     publish: ["editor", "admin"],
-    moderate: ["editor", "admin"],
-    boards: ["editor", "admin"],
   };
   return role === "admin" || (matrix[capability]?.includes(role) ?? false);
 }

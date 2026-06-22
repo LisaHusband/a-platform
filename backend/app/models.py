@@ -206,67 +206,6 @@ class PaymentOrder(IdMixin, TimestampMixin, Base):
     user = relationship("User")
 
 
-# --- 社区（贴吧式）/ Community (Tieba-style) ----------------------------------
-
-
-class Board(IdMixin, TimestampMixin, Base):
-    """讨论吧 / a discussion board."""
-
-    __tablename__ = "boards"
-    slug = Column(String, unique=True, nullable=False)
-    name = Column(String, nullable=False)
-    description = Column(Text, default="")
-    thread_count = Column(Integer, default=0)
-
-
-class Thread(IdMixin, TimestampMixin, Base):
-    """主题帖 / a thread (first post + metadata)."""
-
-    __tablename__ = "threads"
-    __table_args__ = (
-        Index("ix_threads_board_activity", "board_id", "last_activity_at"),
-        Index("ix_threads_board_pinned", "board_id", "is_pinned"),
-    )
-    board_id = Column(Integer, ForeignKey("boards.id"), nullable=False)
-    author_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    title = Column(String, nullable=False)
-    body = Column(Text, nullable=False)
-    views = Column(Integer, default=0)
-    reply_count = Column(Integer, default=0)
-    like_count = Column(Integer, default=0)
-    is_pinned = Column(Integer, default=0)
-    is_locked = Column(Integer, default=0)
-    is_featured = Column(Integer, default=0)  # 精华 / highlighted
-    last_activity_at = Column(DateTime, default=utcnow)
-
-    board = relationship("Board")
-    author = relationship("User")
-
-
-class Post(IdMixin, TimestampMixin, Base):
-    """楼层回复 / a reply (floor) within a thread."""
-
-    __tablename__ = "posts"
-    __table_args__ = (Index("ix_posts_thread_floor", "thread_id", "floor"),)
-    thread_id = Column(Integer, ForeignKey("threads.id"), nullable=False)
-    author_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    body = Column(Text, nullable=False)
-    floor = Column(Integer, nullable=False)  # 楼层号 / floor number
-    like_count = Column(Integer, default=0)
-
-    author = relationship("User")
-
-
-class Like(IdMixin, Base):
-    """点赞去重 / per-user like de-duplication for threads and posts."""
-
-    __tablename__ = "likes"
-    __table_args__ = (UniqueConstraint("user_id", "target_type", "target_id"),)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    target_type = Column(String, nullable=False)  # thread | post
-    target_id = Column(Integer, nullable=False)
-
-
 # --- 采集与合规 / Crawling & compliance --------------------------------------
 
 

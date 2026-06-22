@@ -9,8 +9,6 @@ const TOOLS: { cap: string; key: string; to?: string }[] = [
   { cap: "reviewTier2", key: "reviewTier2" },
   { cap: "reviewTier3", key: "reviewTier3" },
   { cap: "publish", key: "publish" },
-  { cap: "moderate", key: "moderate", to: "/community" },
-  { cap: "boards", key: "boards", to: "/community" },
 ];
 
 export default function Workbench() {
