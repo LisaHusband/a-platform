@@ -10,8 +10,8 @@ The project is under active development; security fixes target only the latest c
 **请勿公开提交 Issue 披露安全漏洞。**
 **Please do not disclose security vulnerabilities via public issues.**
 
-如发现安全问题，请发送邮件至 **security@a-platform.tech**，并尽量包含：
-If you find a security issue, email **security@a-platform.tech** and include where possible:
+如发现安全问题，请发送邮件至 **zongchen3528@outlook.com**，并尽量包含：
+If you find a security issue, email **zongchen3528@outlook.com** and include where possible:
 
 - 漏洞类型与影响范围 / Vulnerability type and impact
 - 复现步骤或概念验证（PoC） / Reproduction steps or a proof of concept
