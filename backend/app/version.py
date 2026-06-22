@@ -8,4 +8,4 @@ environment variable (typically the release id / git short SHA), surfaced by
 import os
 
 APP_NAME = "A-PLATFORM"
-APP_VERSION = os.environ.get("APLATFORM_VERSION", "0.2.0")
+APP_VERSION = os.environ.get("APLATFORM_VERSION", "0.3.0-alpha")
